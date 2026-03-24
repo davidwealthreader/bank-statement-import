@@ -1,9 +1,7 @@
 # Copyright 2025 Wealthreader
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-import json
 import logging
-from datetime import datetime
 
 import requests
 
@@ -237,8 +235,7 @@ class OnlineBankStatementProviderWealthreader(models.Model):
             return accounts[0]
 
         account_descriptions = ", ".join(
-            "{} ({})".format(a.get("name", "?"), a.get("code", "?"))
-            for a in accounts
+            f"{a.get('name', '?')} ({a.get('code', '?')})" for a in accounts
         )
         raise UserError(
             _(
@@ -288,8 +285,8 @@ class OnlineBankStatementProviderWealthreader(models.Model):
             return None
 
         date_field = self.wealthreader_date_field or "value_date"
-        raw_date = tr.get(date_field) or tr.get("value_date") or tr.get(
-            "operation_date"
+        raw_date = (
+            tr.get(date_field) or tr.get("value_date") or tr.get("operation_date")
         )
         if not raw_date:
             return None
@@ -334,12 +331,12 @@ class OnlineBankStatementProviderWealthreader(models.Model):
         """
         uuid = tr.get("uuid")
         if uuid:
-            return "WR-{}".format(uuid)
+            return f"WR-{uuid}"
         # Fallback — deterministic but less reliable
         date_str = tr.get("value_date") or tr.get("operation_date") or ""
         amount = tr.get("amount", 0)
         desc = tr.get("description", "")
-        return "WR-{}-{}-{}".format(date_str, amount, hash(desc))
+        return f"WR-{date_str}-{amount}-{hash(desc)}"
 
     def _wealthreader_build_note(self, tr):
         """Compose a detailed note from transaction metadata."""
@@ -369,7 +366,11 @@ class OnlineBankStatementProviderWealthreader(models.Model):
         val_date = tr.get("value_date")
         if op_date and val_date and op_date != val_date:
             parts.append(
-                _("Operation date: %s / Value date: %s", op_date, val_date)
+                _(
+                    "Operation date: %(op_date)s / Value date: %(val_date)s",
+                    op_date=op_date,
+                    val_date=val_date,
+                )
             )
 
         return "\n".join(parts) if parts else ""
@@ -391,36 +392,32 @@ class OnlineBankStatementProviderWealthreader(models.Model):
         Raises:
             UserError: On HTTP or API-level errors.
         """
-        url = "{}{}".format(
-            self.api_base or WEALTHREADER_API_BASE, endpoint
-        )
+        url = f"{self.api_base or WEALTHREADER_API_BASE}{endpoint}"
         _logger.debug(
             "Wealthreader request: POST %s (entity=%s)",
             url,
             data.get("code", "?"),
         )
         try:
-            resp = requests.post(
-                url, data=data, timeout=WEALTHREADER_REQUEST_TIMEOUT
-            )
-        except requests.exceptions.Timeout:
+            resp = requests.post(url, data=data, timeout=WEALTHREADER_REQUEST_TIMEOUT)
+        except requests.exceptions.Timeout as err:
             raise UserError(
                 _(
                     "The request to Wealthreader timed out. The bank may "
                     "be temporarily slow. Please try again later."
                 )
-            )
-        except requests.exceptions.ConnectionError:
+            ) from err
+        except requests.exceptions.ConnectionError as err:
             raise UserError(
                 _(
                     "Could not connect to Wealthreader. Please check your "
                     "internet connection and try again."
                 )
-            )
+            ) from err
 
         try:
             result = resp.json()
-        except ValueError:
+        except ValueError as err:
             _logger.error(
                 "Wealthreader returned non-JSON response (HTTP %s): %s",
                 resp.status_code,
@@ -432,15 +429,13 @@ class OnlineBankStatementProviderWealthreader(models.Model):
                     "Please try again later or contact support.",
                     resp.status_code,
                 )
-            )
+            ) from err
 
         if not result.get("success", True):
             error = result.get("error", {})
             error_code = error.get("code", "?")
             error_msg = error.get("message", _("Unknown error"))
-            _logger.warning(
-                "Wealthreader API error %s: %s", error_code, error_msg
-            )
+            _logger.warning("Wealthreader API error %s: %s", error_code, error_msg)
             raise UserError(
                 _(
                     "Wealthreader error (code %(code)s): %(message)s",
@@ -466,9 +461,7 @@ class OnlineBankStatementProviderWealthreader(models.Model):
         try:
             payload = self._wealthreader_fetch_entity_data(now, now)
         except UserError as exc:
-            raise UserError(
-                _("Connection test failed: %s", exc.args[0])
-            ) from exc
+            raise UserError(_("Connection test failed: %s", exc.args[0])) from exc
 
         accounts = payload.get("accounts", [])
         if accounts:
@@ -480,9 +473,9 @@ class OnlineBankStatementProviderWealthreader(models.Model):
                 for a in accounts
             )
             message = _(
-                "Connection successful! Found %d account(s):\n%s",
-                len(accounts),
-                account_info,
+                "Connection successful! Found %(count)d account(s):\n%(accounts)s",
+                count=len(accounts),
+                accounts=account_info,
             )
         else:
             message = _(
