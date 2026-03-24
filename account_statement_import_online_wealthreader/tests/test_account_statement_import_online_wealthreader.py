@@ -182,27 +182,21 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
         # Token should have been persisted
         self.assertEqual(self.provider.wealthreader_token, "tok_abc123")
         # Account UUID should have been persisted
-        self.assertEqual(
-            self.provider.wealthreader_account_uuid, "acc-uuid-001"
-        )
+        self.assertEqual(self.provider.wealthreader_account_uuid, "acc-uuid-001")
 
     def test_transaction_fields(self):
         """Verify individual transaction field mapping."""
         date_since = datetime(2024, 1, 1)
         date_until = datetime(2024, 1, 31)
         with self._mock_request(MOCK_ENTITIES_RESPONSE):
-            lines, _ = self.provider._obtain_statement_data(
-                date_since, date_until
-            )
+            lines, _ = self.provider._obtain_statement_data(date_since, date_until)
         # First transaction: electricity bill
         line = lines[0]
         self.assertEqual(line["amount"], -150.00)
         self.assertEqual(line["payment_ref"], "Electricity Jan 2024")
         self.assertEqual(line["unique_import_id"], "WR-tr-uuid-001")
         self.assertEqual(line["partner_name"], "Electric Corp")
-        self.assertEqual(
-            line["account_number"], "ES98 7654 3210 9876 5432 1098"
-        )
+        self.assertEqual(line["account_number"], "ES98 7654 3210 9876 5432 1098")
         self.assertEqual(line["date"], "2024-01-15")
 
     def test_empty_response(self):
@@ -225,9 +219,7 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
                 date_since, date_until
             )
         # Should have matched the first account by IBAN
-        self.assertEqual(
-            self.provider.wealthreader_account_uuid, "acc-uuid-001"
-        )
+        self.assertEqual(self.provider.wealthreader_account_uuid, "acc-uuid-001")
 
     def test_multi_account_no_match_raises(self):
         """Multiple accounts without IBAN match raises UserError."""
@@ -280,9 +272,7 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
         date_since = datetime(2024, 1, 1)
         date_until = datetime(2024, 1, 31)
         with self._mock_request(MOCK_ENTITIES_RESPONSE):
-            lines, _ = self.provider._obtain_statement_data(
-                date_since, date_until
-            )
+            lines, _ = self.provider._obtain_statement_data(date_since, date_until)
         # Third transaction has different operation/value dates
         line3 = lines[2]
         self.assertEqual(line3["date"], "2024-01-10")
@@ -293,9 +283,7 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
         date_since = datetime(2024, 1, 1)
         date_until = datetime(2024, 1, 31)
         with self._mock_request(MOCK_ENTITIES_RESPONSE):
-            lines, _ = self.provider._obtain_statement_data(
-                date_since, date_until
-            )
+            lines, _ = self.provider._obtain_statement_data(date_since, date_until)
         # Third transaction: operation_date=01-10, value_date=01-12
         line3 = lines[2]
         self.assertEqual(line3["date"], "2024-01-12")
