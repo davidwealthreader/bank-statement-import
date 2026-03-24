@@ -465,13 +465,15 @@ class OnlineBankStatementProviderWealthreader(models.Model):
 
         accounts = payload.get("accounts", [])
         if accounts:
-            account_info = "\n".join(
-                "  - {} ({})".format(
-                    a.get("name", _("Unnamed")),
-                    a.get("code", _("No IBAN")),
+            account_lines = []
+            for a in accounts:
+                account_lines.append(
+                    "  - {} ({})".format(
+                        a.get("name", "?"),
+                        a.get("code", "?"),
+                    )
                 )
-                for a in accounts
-            )
+            account_info = "\n".join(account_lines)
             message = _(
                 "Connection successful! Found %(count)d account(s):\n%(accounts)s",
                 count=len(accounts),
