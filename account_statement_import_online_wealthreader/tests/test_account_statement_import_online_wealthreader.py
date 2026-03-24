@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from odoo.exceptions import UserError
 from odoo.tests import common
+from odoo.tools import mute_logger
 
 MOCK_ENTITIES_RESPONSE = {
     "success": True,
@@ -255,6 +256,10 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
             with self.assertRaises(UserError):
                 other_provider._obtain_statement_data(date_since, date_until)
 
+    @mute_logger(
+        "odoo.addons.account_statement_import_online_wealthreader"
+        ".models.online_bank_statement_provider_wealthreader"
+    )
     def test_api_error_raises(self):
         """API error responses are raised as UserError."""
         date_since = datetime(2024, 1, 1)
