@@ -223,12 +223,37 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
 
     def test_multi_account_no_match_raises(self):
         """Multiple accounts without IBAN match raises UserError."""
-        self.bank_account.acc_number = "XX00 0000 0000 0000 0000 0000"
+        # Create a new bank account with a non-matching IBAN and a separate
+        # journal/provider, because Odoo does not allow modifying acc_number
+        # on a trusted bank account.
+        other_bank_account = self.env["res.partner.bank"].create(
+            {
+                "acc_number": "XX00 0000 0000 0000 0000 0000",
+                "partner_id": self.env.company.partner_id.id,
+            }
+        )
+        other_journal = self.env["account.journal"].create(
+            {
+                "name": "Wealthreader No Match",
+                "type": "bank",
+                "code": "WRNM",
+                "currency_id": self.currency_eur.id,
+                "bank_account_id": other_bank_account.id,
+            }
+        )
+        other_provider = self.env["online.bank.statement.provider"].create(
+            {
+                "journal_id": other_journal.id,
+                "service": "wealthreader",
+                "password": "test_api_key",
+                "wealthreader_entity_code": "testbank",
+            }
+        )
         date_since = datetime(2024, 1, 1)
         date_until = datetime(2024, 1, 31)
         with self._mock_request(MOCK_MULTI_ACCOUNT_RESPONSE):
             with self.assertRaises(UserError):
-                self.provider._obtain_statement_data(date_since, date_until)
+                other_provider._obtain_statement_data(date_since, date_until)
 
     def test_api_error_raises(self):
         """API error responses are raised as UserError."""
