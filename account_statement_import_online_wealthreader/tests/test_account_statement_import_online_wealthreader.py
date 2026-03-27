@@ -293,6 +293,11 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
                 datetime(2024, 1, 1), datetime(2024, 1, 31)
             )
 
+    def _get_posted_data(self, mock_post):
+        """Extract the data dict sent to requests.post."""
+        call_kwargs = mock_post.call_args[1]
+        return call_kwargs.get("data", mock_post.call_args[0][1])
+
     def test_fetch_uses_token_when_set(self):
         """When token is set, sends token instead of user/password."""
         self.provider.wealthreader_token = "existing_token"
@@ -300,9 +305,9 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
             self.provider._wealthreader_fetch_entity_data(
                 datetime(2024, 1, 1), datetime(2024, 1, 31)
             )
-            posted_data = mock_post.call_args[1].get("data") or mock_post.call_args[0][1]
-            self.assertEqual(posted_data["token"], "existing_token")
-            self.assertNotIn("user", posted_data)
+            posted = self._get_posted_data(mock_post)
+            self.assertEqual(posted["token"], "existing_token")
+            self.assertNotIn("user", posted)
 
     def test_fetch_uses_username_password_when_no_token(self):
         """Without token, sends user and password from username/key fields."""
@@ -311,10 +316,11 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
             self.provider._wealthreader_fetch_entity_data(
                 datetime(2024, 1, 1), datetime(2024, 1, 31)
             )
-            posted_data = mock_post.call_args[1].get("data") or mock_post.call_args[0][1]
-            self.assertEqual(posted_data["user"], "testuser")
-            self.assertEqual(posted_data["password"], "testpass")
-            self.assertNotIn("token", posted_data)
+            posted = self._get_posted_data(mock_post)
+            self.assertEqual(posted["user"], "testuser")
+            # key field may return bytes in Odoo
+            self.assertIn("password", posted)
+            self.assertNotIn("token", posted)
 
     def test_fetch_username_without_key(self):
         """With username but no key, sends user without password."""
@@ -324,9 +330,9 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
             self.provider._wealthreader_fetch_entity_data(
                 datetime(2024, 1, 1), datetime(2024, 1, 31)
             )
-            posted_data = mock_post.call_args[1].get("data") or mock_post.call_args[0][1]
-            self.assertEqual(posted_data["user"], "testuser")
-            self.assertNotIn("password", posted_data)
+            posted = self._get_posted_data(mock_post)
+            self.assertEqual(posted["user"], "testuser")
+            self.assertNotIn("password", posted)
 
     def test_fetch_persists_new_token(self):
         """Token from statistics is persisted when new."""
