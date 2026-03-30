@@ -294,9 +294,22 @@ class TestAccountStatementImportOnlineWealthreader(common.TransactionCase):
             )
 
     def _get_posted_data(self, mock_post):
-        """Extract the data dict sent to requests.post."""
-        call_kwargs = mock_post.call_args[1]
-        return call_kwargs.get("data", mock_post.call_args[0][1])
+        """Extract the data dict sent to requests.post.
+
+        Handles both modern mock.call_args (with .kwargs) and older
+        tuple-based call_args (args, kwargs).
+        """
+        if not mock_post.call_args:
+            return {}
+        call = mock_post.call_args
+        if hasattr(call, "kwargs"):
+            # Modern unittest.mock (Python 3.8+)
+            return call.kwargs.get("data", {})
+        else:
+            # Older mock: call is a tuple (args_tuple, kwargs_dict)
+            if isinstance(call, tuple) and len(call) > 1:
+                return call[1].get("data", {})
+            return {}
 
     def test_fetch_uses_token_when_set(self):
         """When token is set, sends token instead of user/password."""
