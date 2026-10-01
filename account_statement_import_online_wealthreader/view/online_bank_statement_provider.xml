@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record model="ir.ui.view" id="online_bank_statement_provider_form">
+        <field name="name">online.bank.statement.provider.form</field>
+        <field name="model">online.bank.statement.provider</field>
+        <field
+            name="inherit_id"
+            ref="account_statement_import_online.online_bank_statement_provider_form"
+        />
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='main']" position="inside">
+                <group
+                    name="wealthreader"
+                    string="Wealth Reader"
+                    invisible="service != 'wealthreader'"
+                >
+                    <field name="username" string="API Key" />
+                    <field
+                        name="wealthreader_country_code"
+                        string="Country code"
+                        required="service == 'wealthreader'"
+                    />
+                    <field
+                        name="wealthreader_entity_code"
+                        string="Entity code"
+                        required="service == 'wealthreader'"
+                    />
+                    <field
+                        name="wealthreader_account_uuid"
+                        invisible="not wealthreader_account_uuid"
+                        groups="base.group_no_one"
+                    />
+                    <button
+                        name="action_wealthreader_connect"
+                        string="Connect bank"
+                        colspan="2"
+                        invisible="not username or not wealthreader_entity_code"
+                        type="object"
+                    />
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>
